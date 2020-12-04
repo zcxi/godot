@@ -32,6 +32,7 @@
 
 #include "core/io/resource_loader.h"
 #include "editor/editor_scale.h"
+#include <iostream>
 
 bool ItemListPlugin::_set(const StringName &p_name, const Variant &p_value) {
 	String name = p_name;
@@ -214,6 +215,7 @@ int ItemListItemListPlugin::get_flags() const {
 void ItemListItemListPlugin::add_item() {
 	pp->add_item(vformat(TTR("Item %d"), pp->get_item_count()));
 	_change_notify();
+
 }
 
 int ItemListItemListPlugin::get_item_count() const {
@@ -250,12 +252,29 @@ void ItemListEditor::_notification(int p_notification) {
 	}
 }
 
+void ItemListEditor::_undo_redo_itemPlugins_addItem(int index) {
+	
+	item_plugins[index]->add_item();
+}
+
+void ItemListEditor::_undo_redo_itemPlugins_removeItem(int index, int idx) {
+	
+	std::cout<<"remove item called";
+	item_plugins[index]->erase(idx);
+}
+
 void ItemListEditor::_add_pressed() {
 	if (selected_idx == -1) {
 		return;
 	}
 
-	item_plugins[selected_idx]->add_item();
+	undo_redo->create_action(TTR("ItemListEditor Added Element"));
+    undo_redo->add_do_method(this, "_undo_redo_itemPlugins_addItem", selected_idx);
+	int item_idx = item_plugins[selected_idx]->get_item_count();
+    undo_redo->add_undo_method(this, "_undo_redo_itemPlugins_removeItem", selected_idx, item_idx);
+    //undo_redo.add_do_property(node, "position", Vector2(100,100))
+    //undo_redo.add_undo_property(node, "position", node.position)
+    undo_redo->commit_action();
 }
 
 void ItemListEditor::_delete_pressed() {
@@ -319,6 +338,8 @@ bool ItemListEditor::handles(Object *p_object) const {
 }
 
 void ItemListEditor::_bind_methods() {
+	ClassDB::bind_method("_undo_redo_itemPlugins_addItem", &ItemListEditor::_undo_redo_itemPlugins_addItem);
+	ClassDB::bind_method("_undo_redo_itemPlugins_removeItem", &ItemListEditor::_undo_redo_itemPlugins_removeItem); 
 }
 
 ItemListEditor::ItemListEditor() {
@@ -358,6 +379,8 @@ ItemListEditor::ItemListEditor() {
 	property_editor = memnew(EditorInspector);
 	vbc->add_child(property_editor);
 	property_editor->set_v_size_flags(SIZE_EXPAND_FILL);
+
+	undo_redo = EditorNode::get_undo_redo();
 }
 
 ItemListEditor::~ItemListEditor() {

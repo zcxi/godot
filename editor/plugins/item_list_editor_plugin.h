@@ -42,6 +42,8 @@
 class ItemListPlugin : public Object {
 	GDCLASS(ItemListPlugin, Object);
 
+UndoRedo *undo_redo;
+
 protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -215,6 +217,11 @@ class ItemListEditor : public HBoxContainer {
 	void _delete_pressed();
 
 	void _node_removed(Node *p_node);
+
+	UndoRedo *undo_redo;
+
+	void _undo_redo_itemPlugins_addItem(int index);
+	void _undo_redo_itemPlugins_removeItem(int index, int idx);
 
 protected:
 	void _notification(int p_notification);
