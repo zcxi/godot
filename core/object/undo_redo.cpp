@@ -31,6 +31,7 @@
 #include "undo_redo.h"
 
 #include "core/os/os.h"
+#include <iostream>
 
 void UndoRedo::_discard_redo() {
 	if (current_action == actions.size() - 1) {
@@ -333,7 +334,7 @@ bool UndoRedo::redo() {
 	_process_operation_list(actions.write[current_action].do_ops.front());
 	version++;
 	emit_signal("version_changed");
-
+	std::cout <<"called redo\n";	
 	return true;
 }
 
@@ -346,7 +347,7 @@ bool UndoRedo::undo() {
 	current_action--;
 	version--;
 	emit_signal("version_changed");
-
+	std::cout <<"called undo\n";
 	return true;
 }
 

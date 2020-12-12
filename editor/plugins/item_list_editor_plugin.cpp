@@ -33,6 +33,10 @@
 #include "core/io/resource_loader.h"
 #include "editor/editor_scale.h"
 #include <iostream>
+#include <string>
+#include <cstdint>
+#include <typeinfo>
+	
 
 bool ItemListPlugin::_set(const StringName &p_name, const Variant &p_value) {
 	String name = p_name;
@@ -128,6 +132,11 @@ void ItemListPlugin::_get_property_list(List<PropertyInfo> *p_list) const {
 	}
 }
 
+void ItemListPlugin::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("undoRedo_add_item", "idx"), &ItemListPlugin::undoRedo_add_item);
+	ClassDB::bind_method(D_METHOD("undoRedo_erase", "p_idx"), &ItemListPlugin::undoRedo_erase); 
+}
+
 ///////////////////////////////////////////////////////////////
 ///////////////////////// PLUGINS /////////////////////////////
 ///////////////////////////////////////////////////////////////
@@ -144,9 +153,22 @@ int ItemListOptionButtonPlugin::get_flags() const {
 	return FLAG_ICON | FLAG_ID | FLAG_ENABLE;
 }
 
-void ItemListOptionButtonPlugin::add_item() {
-	ob->add_item(vformat(TTR("Item %d"), ob->get_item_count()));
+void ItemListOptionButtonPlugin::undoRedo_add_item(int item_idx) {
+	ob->add_item(vformat(TTR("Item %d"), item_idx));
 	_change_notify();
+}
+
+void ItemListOptionButtonPlugin::undoRedo_erase(int item_idx){
+	ob->remove_item(item_idx);
+	_change_notify();
+}
+
+void ItemListOptionButtonPlugin::add_item() {
+	undo_redo->create_action(TTR("ItemListOptionButtonPlugin Add Element"));
+	int item_idx = ob->get_item_count();
+    undo_redo->add_do_method(this, "undoRedo_add_item", item_idx);
+    undo_redo->add_undo_method(this, "undoRedo_erase", item_idx);
+    undo_redo->commit_action();
 }
 
 int ItemListOptionButtonPlugin::get_item_count() const {
@@ -154,12 +176,15 @@ int ItemListOptionButtonPlugin::get_item_count() const {
 }
 
 void ItemListOptionButtonPlugin::erase(int p_idx) {
-	ob->remove_item(p_idx);
-	_change_notify();
+	undo_redo->create_action(TTR("ItemListOptionButtonPlugin Remove Element"));
+    undo_redo->add_do_method(this, "undoRedo_erase", p_idx);
+    undo_redo->add_undo_method(this, "undoRedo_add_item", p_idx);
+    undo_redo->commit_action();
 }
 
 ItemListOptionButtonPlugin::ItemListOptionButtonPlugin() {
 	ob = nullptr;
+	undo_redo = EditorNode::get_undo_redo();
 }
 
 ///////////////////////////////////////////////////////////////
@@ -181,6 +206,7 @@ int ItemListPopupMenuPlugin::get_flags() const {
 }
 
 void ItemListPopupMenuPlugin::add_item() {
+	std::cout<<"called add\n";
 	pp->add_item(vformat(TTR("Item %d"), pp->get_item_count()));
 	_change_notify();
 }
@@ -196,7 +222,18 @@ void ItemListPopupMenuPlugin::erase(int p_idx) {
 
 ItemListPopupMenuPlugin::ItemListPopupMenuPlugin() {
 	pp = nullptr;
+	undo_redo = EditorNode::get_undo_redo();
+
 }
+
+void ItemListPopupMenuPlugin::undoRedo_add_item(int idx){
+	pp->add_item(vformat(TTR("Item %d"), idx));
+}
+
+void ItemListPopupMenuPlugin::undoRedo_erase(int idx) {
+	pp->remove_item(idx);
+}
+
 
 ///////////////////////////////////////////////////////////////
 
@@ -212,10 +249,24 @@ int ItemListItemListPlugin::get_flags() const {
 	return FLAG_ICON | FLAG_ENABLE;
 }
 
-void ItemListItemListPlugin::add_item() {
-	pp->add_item(vformat(TTR("Item %d"), pp->get_item_count()));
+void ItemListItemListPlugin::undoRedo_add_item(int idx){
+	pp->add_item(vformat(TTR("Item %d"), idx));
 	_change_notify();
+}
 
+void ItemListItemListPlugin::undoRedo_erase(int idx) {
+	pp->remove_item(idx);
+	_change_notify();
+}
+
+void ItemListItemListPlugin::add_item() {
+	undo_redo->create_action(TTR("ItemListItemListPlugin Add Element"));
+	int idx = pp->get_item_count();
+    undo_redo->add_do_method(this, "undoRedo_add_item", idx);
+    undo_redo->add_undo_method(this, "undoRedo_erase", idx);
+    undo_redo->commit_action();
+
+	std::cout << "add item Ver:" << (int)undo_redo->get_version() << "\n";
 }
 
 int ItemListItemListPlugin::get_item_count() const {
@@ -223,12 +274,18 @@ int ItemListItemListPlugin::get_item_count() const {
 }
 
 void ItemListItemListPlugin::erase(int p_idx) {
-	pp->remove_item(p_idx);
-	_change_notify();
+	std::cout << "call remove item\n";
+	undo_redo->create_action(TTR("ItemListItemListPlugin Remove Element"));
+    undo_redo->add_do_method(this, "undoRedo_erase", p_idx);
+    undo_redo->add_undo_method(this, "undoRedo_add_item", p_idx);
+    undo_redo->commit_action();
+	std::cout << "remove item Ver:" << (int)undo_redo->get_version() << "\n";
 }
 
 ItemListItemListPlugin::ItemListItemListPlugin() {
 	pp = nullptr;
+	undo_redo = EditorNode::get_undo_redo();
+
 }
 
 ///////////////////////////////////////////////////////////////
@@ -252,29 +309,12 @@ void ItemListEditor::_notification(int p_notification) {
 	}
 }
 
-void ItemListEditor::_undo_redo_itemPlugins_addItem(int index) {
-	
-	item_plugins[index]->add_item();
-}
-
-void ItemListEditor::_undo_redo_itemPlugins_removeItem(int index, int idx) {
-	
-	std::cout<<"remove item called";
-	item_plugins[index]->erase(idx);
-}
-
 void ItemListEditor::_add_pressed() {
 	if (selected_idx == -1) {
 		return;
 	}
 
-	undo_redo->create_action(TTR("ItemListEditor Added Element"));
-    undo_redo->add_do_method(this, "_undo_redo_itemPlugins_addItem", selected_idx);
-	int item_idx = item_plugins[selected_idx]->get_item_count();
-    undo_redo->add_undo_method(this, "_undo_redo_itemPlugins_removeItem", selected_idx, item_idx);
-    //undo_redo.add_do_property(node, "position", Vector2(100,100))
-    //undo_redo.add_undo_property(node, "position", node.position)
-    undo_redo->commit_action();
+	item_plugins[selected_idx]->add_item();
 }
 
 void ItemListEditor::_delete_pressed() {
@@ -338,8 +378,8 @@ bool ItemListEditor::handles(Object *p_object) const {
 }
 
 void ItemListEditor::_bind_methods() {
-	ClassDB::bind_method("_undo_redo_itemPlugins_addItem", &ItemListEditor::_undo_redo_itemPlugins_addItem);
-	ClassDB::bind_method("_undo_redo_itemPlugins_removeItem", &ItemListEditor::_undo_redo_itemPlugins_removeItem); 
+	//ClassDB::bind_method(D_METHOD("undoRedo_add_item", "idx"), &ItemListEditor::undoRedo_add_item);
+	//ClassDB::bind_method(D_METHOD("undoRedo_erase", "p_idx"), &ItemListEditor::undoRedo_erase); 
 }
 
 ItemListEditor::ItemListEditor() {
@@ -379,8 +419,6 @@ ItemListEditor::ItemListEditor() {
 	property_editor = memnew(EditorInspector);
 	vbc->add_child(property_editor);
 	property_editor->set_v_size_flags(SIZE_EXPAND_FILL);
-
-	undo_redo = EditorNode::get_undo_redo();
 }
 
 ItemListEditor::~ItemListEditor() {
@@ -414,7 +452,7 @@ ItemListEditorPlugin::ItemListEditorPlugin(EditorNode *p_node) {
 	item_list_editor->hide();
 	item_list_editor->add_plugin(memnew(ItemListOptionButtonPlugin));
 	item_list_editor->add_plugin(memnew(ItemListPopupMenuPlugin));
-	item_list_editor->add_plugin(memnew(ItemListItemListPlugin));
+	item_list_editor->add_plugin(memnew(ItemListItemListPlugin));	
 }
 
 ItemListEditorPlugin::~ItemListEditorPlugin() {

@@ -42,12 +42,11 @@
 class ItemListPlugin : public Object {
 	GDCLASS(ItemListPlugin, Object);
 
-UndoRedo *undo_redo;
-
 protected:
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
 	void _get_property_list(List<PropertyInfo> *p_list) const;
+	static void _bind_methods();
 
 public:
 	enum Flags {
@@ -57,6 +56,7 @@ public:
 		FLAG_ENABLE = 8,
 		FLAG_SEPARATOR = 16
 	};
+	UndoRedo *undo_redo;
 
 	virtual void set_object(Object *p_object) = 0;
 	virtual bool handles(Object *p_object) const = 0;
@@ -89,6 +89,8 @@ public:
 	virtual void add_item() = 0;
 	virtual int get_item_count() const = 0;
 	virtual void erase(int p_idx) = 0;
+	virtual void undoRedo_add_item(int idx) = 0;
+	virtual void undoRedo_erase(int p_pdx) = 0;
 
 	ItemListPlugin() {}
 };
@@ -120,6 +122,8 @@ public:
 	virtual void add_item() override;
 	virtual int get_item_count() const override;
 	virtual void erase(int p_idx) override;
+	virtual void undoRedo_add_item(int idx) override;
+	virtual void undoRedo_erase(int p_idx) override;
 
 	ItemListOptionButtonPlugin();
 };
@@ -160,6 +164,8 @@ public:
 	virtual void add_item() override;
 	virtual int get_item_count() const override;
 	virtual void erase(int p_idx) override;
+	virtual void undoRedo_add_item(int idx) override;
+	virtual void undoRedo_erase(int p_idx) override;
 
 	ItemListPopupMenuPlugin();
 };
@@ -188,6 +194,8 @@ public:
 	virtual void add_item() override;
 	virtual int get_item_count() const override;
 	virtual void erase(int p_idx) override;
+	virtual void undoRedo_add_item(int idx) override;
+	virtual void undoRedo_erase(int p_idx) override;
 
 	ItemListItemListPlugin();
 };
@@ -217,11 +225,6 @@ class ItemListEditor : public HBoxContainer {
 	void _delete_pressed();
 
 	void _node_removed(Node *p_node);
-
-	UndoRedo *undo_redo;
-
-	void _undo_redo_itemPlugins_addItem(int index);
-	void _undo_redo_itemPlugins_removeItem(int index, int idx);
 
 protected:
 	void _notification(int p_notification);
