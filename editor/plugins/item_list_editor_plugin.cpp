@@ -33,10 +33,7 @@
 #include "core/io/resource_loader.h"
 #include "editor/editor_scale.h"
 #include <iostream>
-#include <string>
-#include <cstdint>
-#include <typeinfo>
-	
+#include <string>	
 
 bool ItemListPlugin::_set(const StringName &p_name, const Variant &p_value) {
 	String name = p_name;
