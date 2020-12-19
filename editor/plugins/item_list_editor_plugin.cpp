@@ -269,7 +269,7 @@ void ItemListItemListPlugin::undoRedo_add_new_item(int idx){
 
 // Used to add item in specific position in list (if undoing a delete)
 void ItemListItemListPlugin::undoRedo_re_add_item(unsigned int position, String name, Ref<Texture2D> icon, bool enabled){
-	pp->readd_item(name, position, enabled, icon);
+	pp->re_add_item(name, position, enabled, icon);
 	_change_notify();
 }
 
