@@ -333,8 +333,7 @@ bool UndoRedo::redo() {
 
 	_process_operation_list(actions.write[current_action].do_ops.front());
 	version++;
-	emit_signal("version_changed");
-	std::cout <<"called redo\n";	
+	emit_signal("version_changed");	
 	return true;
 }
 
@@ -347,7 +346,6 @@ bool UndoRedo::undo() {
 	current_action--;
 	version--;
 	emit_signal("version_changed");
-	std::cout <<"called undo\n";
 	return true;
 }
 
