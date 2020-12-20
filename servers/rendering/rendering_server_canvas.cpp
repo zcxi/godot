@@ -545,8 +545,6 @@ void RenderingServerCanvas::canvas_item_add_polyline(RID p_item, const Vector<Po
 	Item *canvas_item = canvas_item_owner.getornull(p_item);
 	ERR_FAIL_COND(!canvas_item);
 
-	Color color = Color(1, 1, 1, 1);
-
 	Vector<int> indices;
 	int pc = p_points.size();
 	int pc2 = pc * 2;
@@ -567,8 +565,6 @@ void RenderingServerCanvas::canvas_item_add_polyline(RID p_item, const Vector<Po
 	Color *colors_ptr = colors.ptrw();
 
 	if (p_antialiased) {
-		Color color2 = Color(1, 1, 1, 0);
-
 		PackedColorArray colors_top;
 		PackedVector2Array points_top;
 
@@ -620,10 +616,8 @@ void RenderingServerCanvas::canvas_item_add_polyline(RID p_item, const Vector<Po
 			points_bottom_ptr[j] = pos - tangent;
 			points_bottom_ptr[j2] = pos - tangent - tangent;
 
-			if (i < p_colors.size()) {
-				color = p_colors[i];
-				color2 = Color(color.r, color.g, color.b, 0);
-			}
+			Color color = p_colors[i];
+			Color color2 = Color(color.r, color.g, color.b, 0);
 
 			colors_ptr[j] = color;
 			colors_ptr[j2] = color;
@@ -659,14 +653,12 @@ void RenderingServerCanvas::canvas_item_add_polyline(RID p_item, const Vector<Po
 			j2 = j + 1;
 
 			Vector2 tangent = ((t + prev_t).normalized()) * p_width * 0.5;
-			Vector2 pos = p_points[i];
+
+			Vector2 pos = p_points[j];
+			Color color = p_colors[j2];
 
 			points_ptr[j] = pos + tangent;
 			points_ptr[j2] = pos - tangent;
-
-			if (i < p_colors.size()) {
-				color = p_colors[i];
-			}
 
 			colors_ptr[j] = color;
 			colors_ptr[j2] = color;
